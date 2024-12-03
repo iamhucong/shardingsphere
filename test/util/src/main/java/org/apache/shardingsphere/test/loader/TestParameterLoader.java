@@ -84,7 +84,7 @@ public final class TestParameterLoader {
         Collection<FileSummary> sqlCaseFileSummaries = loadStrategy.loadSQLCaseFileSummaries(sqlCaseURI);
         Collection<FileSummary> resultFileSummaries = loadStrategy.loadSQLCaseFileSummaries(resultURI);
         Map<String, FileSummary> resultFileSummaryMap =
-                resultFileSummaries.stream().collect(Collectors.toMap(fileSummary -> Files.getNameWithoutExtension(fileSummary.getFileName()), Function.identity()));
+                resultFileSummaries.stream().collect(Collectors.toMap(fileSummary -> Files.getNameWithoutExtension(fileSummary.getFileName()), Function.identity(), (a, b) -> a));
         return sqlCaseFileSummaries.stream().filter(each -> StringUtils.isEmpty(caseRegex) || each.getFileName().matches(caseRegex)).flatMap(each -> {
             List<String> sqlCaseFileContent = loadContent(URI.create(each.getAccessURI()));
             String fileName = Files.getNameWithoutExtension(each.getFileName());

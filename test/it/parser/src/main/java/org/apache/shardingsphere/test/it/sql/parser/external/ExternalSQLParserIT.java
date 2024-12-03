@@ -33,6 +33,7 @@ import org.apache.shardingsphere.test.loader.TestParameterLoadTemplate;
 import org.apache.shardingsphere.test.loader.TestParameterLoader;
 import org.apache.shardingsphere.test.loader.strategy.TestParameterLoadStrategy;
 import org.apache.shardingsphere.test.loader.strategy.impl.GitHubTestParameterLoadStrategy;
+import org.apache.shardingsphere.test.loader.strategy.impl.LocalFileTestParameterLoadStrategy;
 import org.junit.jupiter.api.condition.EnabledIf;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.parallel.Execution;
@@ -44,6 +45,7 @@ import org.junit.jupiter.params.provider.ArgumentsSource;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.Objects;
 import java.util.stream.Stream;
 
 public abstract class ExternalSQLParserIT {
@@ -82,12 +84,34 @@ public abstract class ExternalSQLParserIT {
         }
         
         private Stream<ExternalSQLTestParameter> getTestParameters(final ExternalCaseSettings settings) throws ReflectiveOperationException {
-            TestParameterLoadStrategy loadStrategy = new GitHubTestParameterLoadStrategy();
-            URI sqlCaseURI = URI.create(settings.caseURL());
+            TestParameterLoadStrategy loadStrategy = getLoadStrategy(settings);
+            URI sqlCaseURI = getSQLCaseURI(settings);
             URI resultURI = URI.create(settings.resultURL());
             TestParameterLoadTemplate loadTemplate = settings.template().getConstructor().newInstance();
             TestParameterLoader loader = new TestParameterLoader(loadStrategy, loadTemplate);
             return loader.load(sqlCaseURI, resultURI, settings.value(), settings.reportType());
+        }
+        
+        private TestParameterLoadStrategy getLoadStrategy(final ExternalCaseSettings settings) {
+            switch (settings.sourceType()) {
+                case GITHUB:
+                    return new GitHubTestParameterLoadStrategy();
+                case LOCAL:
+                    return new LocalFileTestParameterLoadStrategy();
+                default:
+                    throw new UnsupportedOperationException(settings.sourceType().name());
+            }
+        }
+        
+        private URI getSQLCaseURI(final ExternalCaseSettings settings) {
+            switch (settings.sourceType()) {
+                case GITHUB:
+                    return URI.create(settings.caseURL());
+                case LOCAL:
+                    return URI.create(Objects.requireNonNull(Thread.currentThread().getContextClassLoader().getResource(settings.caseURL()), "Test case does not exist.").getPath());
+                default:
+                    throw new UnsupportedOperationException(settings.sourceType().name());
+            }
         }
     }
 }

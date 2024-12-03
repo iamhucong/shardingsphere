@@ -64,4 +64,15 @@ public @interface ExternalCaseSettings {
      * @return test parameter load template
      */
     Class<? extends TestParameterLoadTemplate> template();
+    
+    /**
+     * Get source type.
+     *
+     * @return source type
+     */
+    SourceType sourceType() default SourceType.GITHUB;
+    
+    enum SourceType {
+        GITHUB, LOCAL
+    }
 }
