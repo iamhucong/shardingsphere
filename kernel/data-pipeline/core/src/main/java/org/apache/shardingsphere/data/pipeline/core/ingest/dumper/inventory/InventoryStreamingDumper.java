@@ -129,9 +129,7 @@ public final class InventoryStreamingDumper extends AbstractInventoryDumper {
                 List<Record> result = new LinkedList<>();
                 while (resultSet.next()) {
                     if (result.size() >= batchSize) {
-                        if (!dumperContext.hasUniqueKey()) {
-                            channel.push(result);
-                        }
+                        channel.push(result);
                         result = new LinkedList<>();
                     }
                     result.add(loadDataRecord(resultSet, resultSetMetaData, tableMetaData));
@@ -259,25 +257,25 @@ public final class InventoryStreamingDumper extends AbstractInventoryDumper {
     }
     
     private void consumeResultSetToChannel(final PipelineTableMetaData tableMetaData, final ResultSet resultSet, final int batchSize) throws SQLException {
-        int rowCount = 0;
         JobRateLimitAlgorithm rateLimitAlgorithm = dumperContext.getRateLimitAlgorithm();
         ResultSetMetaData resultSetMetaData = resultSet.getMetaData();
         List<Record> dataRecords = new LinkedList<>();
         while (resultSet.next()) {
-            if (dataRecords.size() >= batchSize) {
-                channel.push(dataRecords);
-                dataRecords = new LinkedList<>();
-            }
-            dataRecords.add(loadDataRecord(resultSet, resultSetMetaData, tableMetaData));
-            ++rowCount;
             if (!isRunning()) {
                 log.info("Broke because of inventory dump is not running.");
                 break;
             }
-            if (null != rateLimitAlgorithm && 0 == rowCount % batchSize) {
-                rateLimitAlgorithm.intercept(PipelineSQLOperationType.SELECT, 1);
+            dataRecords.add(loadDataRecord(resultSet, resultSetMetaData, tableMetaData));
+            if (dataRecords.size() == batchSize) {
+                channel.push(dataRecords);
+                log.debug("Send {} records to channel", dataRecords.size());
+                dataRecords = new LinkedList<>();
+                if (null != rateLimitAlgorithm) {
+                    rateLimitAlgorithm.intercept(PipelineSQLOperationType.SELECT, 1);
+                }
             }
         }
+        channel.push(dataRecords);
         log.debug("Send {} records to channel", dataRecords.size());
     }
     
